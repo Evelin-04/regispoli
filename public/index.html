@@ -347,7 +347,11 @@
                                         <i class="ph-fill ph-file-xls text-3xl text-emerald-500"></i>
                                     </div>
                                     <p class="text-sm font-medium text-slate-700" id="excelDropText">Arrastre el listado Excel aquí</p>
-                                    <p class="text-xs text-slate-500 mt-2 font-mono bg-white inline-block mx-auto px-3 py-1 rounded border border-slate-200" id="excelFileName">Ningún archivo</p>
+                                    <p class="text-xs text-slate-500 mt-2 font-mono bg-white inline-block mx-auto px-3 py-1 rounded border border-slate-200 mb-4" id="excelFileName">Ningún archivo</p>
+                                    
+                                    <button type="button" onclick="event.stopPropagation(); downloadFormat()" class="relative z-20 mx-auto flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all active:scale-95">
+                                        <i class="ph-bold ph-download-simple"></i> Descargar Plantilla .xlsx
+                                    </button>
                                 </div>
                                 <!-- Feedback del Excel -->
                                 <div id="excelFeedback" class="hidden mt-3 p-3 rounded-lg text-sm border shadow-sm animate-fade-in"></div>
