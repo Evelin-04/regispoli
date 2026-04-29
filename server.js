@@ -6,8 +6,8 @@ const app = express();
 const PORT = 3000;
 const API_URL = 'https://apipoliciadev.azurewebsites.net/';
 
-// Sirve los archivos estáticos (index.html, styles.css, app.js)
-app.use(express.static(path.join(__dirname)));
+// Sirve los archivos estáticos desde la carpeta public
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Proxy para las peticiones a la API
 // Todas las llamadas desde el frontend hacia /api/... serán redirigidas al backend C#
