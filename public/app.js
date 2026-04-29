@@ -173,24 +173,13 @@ const REQUIRED_EXCEL_COLUMNS = [
 ];
 
 // ==========================================
-// Descargar Formato Excel
+// Descargar Formato Excel (SOLO CABECERAS)
 // ==========================================
 function downloadFormat() {
-    // Generamos un formato en blanco con las columnas requeridas exactamente como se pidieron
-    const emptyRow = {};
-    REQUIRED_EXCEL_COLUMNS.forEach(col => {
-        // Valores por defecto para booleanos para guiar al usuario
-        if (col === 'Agente de vialidad' || col === 'Puede multar') {
-            emptyRow[col] = 'NO';
-        } else {
-            emptyRow[col] = '';
-        }
-    });
-
-    const dataToExport = [emptyRow];
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    // Generamos un arreglo de arreglos (AOA) con solo la primera fila de títulos
+    const worksheet = XLSX.utils.aoa_to_sheet([REQUIRED_EXCEL_COLUMNS]);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Plantilla Oficiales");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Plantilla");
     
     // Descargar archivo
     XLSX.writeFile(workbook, "Plantilla_Registro_SSP.xlsx");
