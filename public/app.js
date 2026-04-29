@@ -163,39 +163,37 @@ if (searchInput) {
 const REQUIRED_EXCEL_COLUMNS = [
     'Nombre', 
     'Primer apellido', 
+    'Segundo apellido',
     'Numero de agente', 
     'Agente de vialidad', 
-    'Puede multar'
+    'Puede multar',
+    'Nombre de Grupo',
+    'Municipio',
+    'Estado'
 ];
 
 // ==========================================
 // Descargar Formato Excel
 // ==========================================
 function downloadFormat() {
-    // Si ya hay datos cargados, exportamos esos datos.
-    // Si no, generamos un formato en blanco con las columnas requeridas
-    let dataToExport = [];
-    if (parsedExcelData && parsedExcelData.length > 0) {
-        dataToExport = parsedExcelData;
-    } else {
-        // Objeto vacío con las columnas necesarias
-        const emptyRow = {};
-        REQUIRED_EXCEL_COLUMNS.forEach(col => emptyRow[col] = '');
-        // Agregamos algunas columnas opcionales útiles para el template
-        emptyRow['Segundo apellido'] = '';
-        emptyRow['Nombre de grupo'] = '';
-        emptyRow['Municipio'] = '';
-        emptyRow['Estado'] = '';
-        emptyRow['CreatedUser'] = '1';
-        dataToExport = [emptyRow];
-    }
+    // Generamos un formato en blanco con las columnas requeridas exactamente como se pidieron
+    const emptyRow = {};
+    REQUIRED_EXCEL_COLUMNS.forEach(col => {
+        // Valores por defecto para booleanos para guiar al usuario
+        if (col === 'Agente de vialidad' || col === 'Puede multar') {
+            emptyRow[col] = 'NO';
+        } else {
+            emptyRow[col] = '';
+        }
+    });
 
+    const dataToExport = [emptyRow];
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Oficiales");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Plantilla Oficiales");
     
     // Descargar archivo
-    XLSX.writeFile(workbook, "Formato_Registro_Oficiales.xlsx");
+    XLSX.writeFile(workbook, "Plantilla_Registro_SSP.xlsx");
 }
 const MAX_IMAGE_SIZE_MB = 5;
 const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
