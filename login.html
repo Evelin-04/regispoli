@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SSP QR Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="text-slate-200">
+
+    <!-- Config Button -->
+    <button onclick="openConfig()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-2 bg-slate-800/50 rounded-lg">
+        <i class="ph ph-gear text-xl"></i>
+    </button>
+
+    <div class="w-full max-w-md p-8 bg-slate-900/80 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-700/50">
+        <div class="flex justify-center mb-6">
+            <div class="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30">
+                <i class="ph-fill ph-shield-check text-3xl text-white"></i>
+            </div>
+        </div>
+        
+        <h2 class="text-2xl font-bold text-center text-white mb-2">Acceso al Sistema</h2>
+        <p class="text-slate-400 text-center text-sm mb-8">Ingrese sus credenciales de administrador para continuar.</p>
+
+        <form id="loginForm" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1.5" for="username">Nombre de Usuario</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="ph ph-user text-slate-500 text-lg"></i>
+                    </div>
+                    <input type="text" id="username" required placeholder="admin" 
+                        class="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1.5" for="password">Contraseña</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="ph ph-lock-key text-slate-500 text-lg"></i>
+                    </div>
+                    <input type="password" id="password" required placeholder="••••••••" 
+                        class="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                </div>
+            </div>
+
+            <div id="errorMessage" class="hidden bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg flex items-center gap-2">
+                <i class="ph-fill ph-warning-circle text-lg"></i>
+                <span id="errorText">Credenciales inválidas.</span>
+            </div>
+
+            <button type="submit" id="btnSubmit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2">
+                <span>Iniciar Sesión</span>
+                <i class="ph-bold ph-sign-in"></i>
+            </button>
+        </form>
+    </div>
+
+    <!-- Modal Configuración API -->
+    <div id="configModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-slate-800 p-6 rounded-2xl shadow-xl w-full max-w-sm border border-slate-700">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i class="ph-fill ph-gear"></i> Configurar API
+            </h3>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-300 mb-1">URL Base de la API</label>
+                <input type="text" id="apiUrlInput" placeholder="https://localhost:7150/api" 
+                    class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500">
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeConfig()" class="px-4 py-2 text-sm text-slate-400 hover:text-white">Cancelar</button>
+                <button type="button" onclick="saveConfig()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Init URL
+        let BASE_API_URL = localStorage.getItem('qr_api_url') || '/api';
+        
+        function openConfig() {
+            document.getElementById('apiUrlInput').value = BASE_API_URL;
+            document.getElementById('configModal').classList.remove('hidden');
+        }
+        function closeConfig() {
+            document.getElementById('configModal').classList.add('hidden');
+        }
+        function saveConfig() {
+            let url = document.getElementById('apiUrlInput').value.trim();
+            if (url) {
+                if (url.endsWith('/')) url = url.slice(0, -1);
+                if (!url.endsWith('/api')) url += '/api';
+                localStorage.setItem('qr_api_url', url);
+                BASE_API_URL = url;
+            }
+            closeConfig();
+        }
+
+        // Handle Login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const btnSubmit = document.getElementById('btnSubmit');
+            const errorDiv = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+
+            errorDiv.classList.add('hidden');
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-xl"></i> Verificando...';
+
+            try {
+                // Enviar al endpoint de admin (usamos ruta relativa para pasar por el proxy y evitar CORS)
+                // Log para depuración
+                console.log('Intentando login en /api/admin/login con:', { username, password });
+
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: username, password: password })
+                });
+
+                console.log('Respuesta de la API:', response.status, response.statusText);
+
+                if (!response.ok) {
+                    let msg = 'Error de conexión o credenciales inválidas.';
+                    try {
+                        const err = await response.json();
+                        console.log('Detalle del error:', err);
+                        msg = err.message || (err.errors ? JSON.stringify(err.errors) : msg);
+                    } catch(e) {
+                        console.log('La respuesta no es JSON');
+                    }
+                    throw new Error(msg);
+                }
+
+                const data = await response.json();
+                console.log('Login exitoso, datos recibidos:', data);
+                
+                // Asumiendo que el token viene en data.token o data.data.token
+                const token = data.token || (data.data ? data.data.token : null) || data.jwt; 
+                
+                if (token) {
+                    localStorage.setItem('qr_jwt_token', token);
+                    // Guardamos los datos del usuario de la base de datos
+                    const userData = data.data || data;
+                    localStorage.setItem('qr_user_name', userData.fullName || 'Administrador');
+                    localStorage.setItem('qr_user_email', userData.email || 'admin@correo.com');
+                    
+                    window.location.href = 'index.html'; // Redirigir al dashboard
+                } else {
+                    throw new Error('El servidor no devolvió un Token JWT válido.');
+                }
+            } catch (error) {
+                let showMsg = error.message;
+                if(showMsg === 'Failed to fetch') showMsg = 'El servidor rechazó la conexión (CORS) o la API está apagada.';
+                errorText.innerText = showMsg;
+                errorDiv.classList.remove('hidden');
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<span>Iniciar Sesión</span> <i class="ph-bold ph-sign-in"></i>';
+            }
+        });
+    </script>
+</body>
+</html>

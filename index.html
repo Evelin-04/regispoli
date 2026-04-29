@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard SSP - Registro de Oficiales</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 flex h-screen overflow-hidden selection:bg-blue-200 selection:text-blue-900">
+
+    <!-- SIDEBAR (Menú Lateral) -->
+    <aside class="w-72 bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 z-20 shrink-0 shadow-2xl relative">
+        <!-- Logo Area -->
+        <div class="h-20 flex items-center px-6 border-b border-slate-800 bg-slate-950/50">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white shadow-lg shadow-blue-900/20">
+                    <i class="ph-fill ph-shield-star text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-white font-bold text-lg tracking-wide leading-tight">SSP Admin</h1>
+                    <p class="text-xs text-blue-400 font-medium uppercase tracking-wider">Gestión Policial</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="flex-1 overflow-y-auto py-6 px-4 no-scrollbar">
+            <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Principal</p>
+            <nav class="space-y-1 mb-8">
+                <a href="#" onclick="showSection('uploadSectionView')" id="navUpload" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-blue-600/10 text-blue-400 relative transition-colors">
+                    <div id="navUploadIndicator" class="absolute left-0 top-2 bottom-2 w-1 bg-blue-500 rounded-r-md"></div>
+                    <i class="ph-fill ph-users-three text-xl"></i> Alta Masiva
+                </a>
+                <a href="#" onclick="showSection('historySectionView')" id="navHistory" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 hover:text-white transition-colors relative">
+                    <div id="navHistoryIndicator" class="absolute left-0 top-2 bottom-2 w-1 bg-blue-500 rounded-r-md hidden"></div>
+                    <i class="ph ph-list-dashes text-xl text-slate-400"></i> Oficiales Registrados
+                </a>
+            </nav>
+
+            <!-- Configuración oculta por ser interna -->
+        </div>
+
+        <!-- User Profile (Bottom) -->
+        <div class="p-4 border-t border-slate-800 bg-slate-950/30">
+            <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer">
+                <img id="userAvatar" src="https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff" alt="User" class="w-10 h-10 rounded-full border-2 border-slate-700">
+                <div class="flex-1 min-w-0">
+                    <p id="userNameLabel" class="text-sm font-medium text-white truncate italic">Cargando...</p>
+                    <p id="userEmailLabel" class="text-xs text-slate-400 truncate italic">admin@ssp.gob.mx</p>
+                </div>
+                <i onclick="logout()" class="ph ph-sign-out text-slate-400 hover:text-red-400 transition-colors" title="Cerrar sesión"></i>
+            </div>
+        </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50/50">
+        
+        <!-- TOPBAR -->
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 z-10 shrink-0">
+            <!-- Search & Breadcrumbs -->
+            <div class="flex items-center gap-6 flex-1">
+                <div class="hidden md:flex items-center text-sm text-slate-500 font-medium">
+                    <a href="#" class="hover:text-blue-600 transition-colors">Inicio</a>
+                    <i class="ph ph-caret-right mx-2 text-slate-400"></i>
+                    <a href="#" class="hover:text-blue-600 transition-colors">Recursos Humanos</a>
+                    <i class="ph ph-caret-right mx-2 text-slate-400"></i>
+                    <span class="text-slate-800">Alta Masiva de Oficiales</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-4">
+                <button onclick="window.location.href='index.html'" class="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg transition-colors">
+                    <i class="ph ph-arrows-clockwise text-lg"></i>
+                    <span>Reiniciar Tarea</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ÁREA DE TRABAJO (Scrollable) -->
+        <main class="flex-1 overflow-y-auto p-8 custom-scrollbar relative">
+            
+            <!-- MODAL DE GUÍA DE FORMATO -->
+            <div id="formatGuideModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 opacity-0" onclick="if(event.target === this) closeFormatGuide()">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden transform scale-95 transition-all duration-300 opacity-0 flex flex-col max-h-[90vh]" id="formatGuideContent">
+                    
+                    <!-- Modal Header -->
+                    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="ph-fill ph-info text-blue-500 text-2xl"></i> Guía de Importación (Vista Previa)
+                        </h3>
+                        <button type="button" onclick="closeFormatGuide()" class="text-slate-400 hover:text-slate-800 transition-colors p-1.5 rounded-lg hover:bg-slate-200">
+                            <i class="ph ph-x text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Modal Body -->
+                    <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-8">
+                        
+                        <!-- Excel Format Section -->
+                        <div>
+                            <h4 class="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                                <i class="ph-fill ph-file-xls text-emerald-500 text-xl"></i> 1. Estructura del Archivo Excel
+                            </h4>
+                            <p class="text-sm text-slate-600 mb-4">El Excel debe tener una fila de encabezados con exactamente estas columnas (sensible a mayúsculas y minúsculas). Puedes usar "SI" / "NO" en los campos lógicos.</p>
+                            
+                            <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm">
+                                <table class="w-full text-left text-sm whitespace-nowrap">
+                                    <thead class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                                        <tr>
+                                            <th class="py-2.5 px-4">Nombre</th>
+                                            <th class="py-2.5 px-4">Primer apellido</th>
+                                            <th class="py-2.5 px-4">Segundo apellido</th>
+                                            <th class="py-2.5 px-4 bg-blue-50 text-blue-700">Numero de agente</th>
+                                            <th class="py-2.5 px-4">Agente de vialidad</th>
+                                            <th class="py-2.5 px-4">Puede multar</th>
+                                            <th class="py-2.5 px-4">Nombre de grupo</th>
+                                            <th class="py-2.5 px-4">Municipio</th>
+                                            <th class="py-2.5 px-4">Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-slate-600 font-mono text-xs">
+                                        <tr class="hover:bg-slate-50 transition-colors">
+                                            <td class="py-2.5 px-4">Juan Carlos</td>
+                                            <td class="py-2.5 px-4">Pérez</td>
+                                            <td class="py-2.5 px-4">Gómez</td>
+                                            <td class="py-2.5 px-4 font-bold text-blue-600 bg-blue-50/50">AP-00123</td>
+                                            <td class="py-2.5 px-4 text-emerald-600 font-bold">SI</td>
+                                            <td class="py-2.5 px-4 text-red-500 font-bold">NO</td>
+                                            <td class="py-2.5 px-4">Sector Norte</td>
+                                            <td class="py-2.5 px-4">Cancún</td>
+                                            <td class="py-2.5 px-4">Quintana Roo</td>
+                                        </tr>
+                                        <tr class="hover:bg-slate-50 transition-colors">
+                                            <td class="py-2.5 px-4">María Teresa</td>
+                                            <td class="py-2.5 px-4">López</td>
+                                            <td class="py-2.5 px-4 text-slate-400 italic">(vacío)</td>
+                                            <td class="py-2.5 px-4 font-bold text-blue-600 bg-blue-50/50">AP-00124</td>
+                                            <td class="py-2.5 px-4 text-red-500 font-bold">NO</td>
+                                            <td class="py-2.5 px-4 text-emerald-600 font-bold">SI</td>
+                                            <td class="py-2.5 px-4">Tránsito</td>
+                                            <td class="py-2.5 px-4">Solidaridad</td>
+                                            <td class="py-2.5 px-4">Quintana Roo</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Image Format Section -->
+                        <div>
+                            <h4 class="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                                <i class="ph-fill ph-images text-blue-500 text-xl"></i> 2. Nomenclatura de Fotografías
+                            </h4>
+                            <p class="text-sm text-slate-600 mb-4">
+                                El nombre de cada archivo de imagen (sin contar la extensión) <b>DEBE ser idéntico</b> al campo <span class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono font-medium">Numero de agente</span> indicado en el Excel. El sistema cruzará esta información automáticamente.
+                            </p>
+                            
+                            <div class="flex flex-wrap gap-4 items-center justify-center bg-slate-50 p-8 rounded-xl border border-slate-200">
+                                
+                                <!-- Card 1 -->
+                                <div class="bg-white p-4 rounded-xl shadow-md border border-slate-100 flex flex-col items-center gap-3 w-48 relative">
+                                    <div class="absolute -top-3 -right-3 bg-emerald-500 text-white rounded-full p-1 shadow-sm border-2 border-white">
+                                        <i class="ph-bold ph-check"></i>
+                                    </div>
+                                    <div class="w-20 h-20 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden border border-slate-200">
+                                        <i class="ph-fill ph-user-circle text-5xl text-slate-300"></i>
+                                    </div>
+                                    <div class="text-center w-full">
+                                        <div class="bg-slate-800 text-white text-xs font-mono px-2 py-1 rounded shadow-inner truncate" title="AP-00123.jpg">
+                                            AP-00123.jpg
+                                        </div>
+                                        <div class="text-emerald-600 text-[10px] mt-2 font-bold uppercase tracking-wider flex justify-center items-center gap-1">
+                                            <i class="ph-bold ph-link-simple"></i> Enlaza con Juan
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <i class="ph-bold ph-arrows-left-right text-3xl text-slate-300 mx-4 hidden sm:block"></i>
+
+                                <!-- Card 2 -->
+                                <div class="bg-white p-4 rounded-xl shadow-md border border-slate-100 flex flex-col items-center gap-3 w-48 relative">
+                                    <div class="absolute -top-3 -right-3 bg-emerald-500 text-white rounded-full p-1 shadow-sm border-2 border-white">
+                                        <i class="ph-bold ph-check"></i>
+                                    </div>
+                                    <div class="w-20 h-20 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden border border-slate-200">
+                                        <i class="ph-fill ph-user-circle text-5xl text-slate-300"></i>
+                                    </div>
+                                    <div class="text-center w-full">
+                                        <div class="bg-slate-800 text-white text-xs font-mono px-2 py-1 rounded shadow-inner truncate" title="AP-00124.png">
+                                            AP-00124.png
+                                        </div>
+                                        <div class="text-emerald-600 text-[10px] mt-2 font-bold uppercase tracking-wider flex justify-center items-center gap-1">
+                                            <i class="ph-bold ph-link-simple"></i> Enlaza con María
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    <!-- Modal Footer -->
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 text-right shrink-0">
+                        <button type="button" onclick="closeFormatGuide()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg transition-colors shadow-sm shadow-blue-600/30">
+                            Entendido, cerrar guía
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- MODAL DE CONFIGURACIÓN (JWT) -->
+            <div id="configModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 opacity-0" onclick="if(event.target === this) closeConfigModal()">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform scale-95 transition-all duration-300 opacity-0 flex flex-col" id="configContent">
+                    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="ph-fill ph-gear text-slate-500 text-2xl"></i> Configuración de Sistema
+                        </h3>
+                        <button type="button" onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-800 transition-colors p-1.5 rounded-lg hover:bg-slate-200">
+                            <i class="ph ph-x text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">URL Base de la API</label>
+                            <p class="text-xs text-slate-500 mb-3">Ruta de acceso a tu backend de .NET.</p>
+                            <input type="text" id="apiBaseUrlInput" placeholder="https://localhost:7150/api" class="w-full border border-slate-300 rounded-lg p-3 text-sm font-mono text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Token de Autorización (JWT)</label>
+                            <p class="text-xs text-slate-500 mb-3">Requerido temporalmente para la creación y asignación de Grupos Policiales. Obtén este token iniciando sesión en la API (Swagger).</p>
+                            <textarea id="jwtTokenInput" rows="4" placeholder="eyJh..." class="w-full border border-slate-300 rounded-lg p-3 text-sm font-mono text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"></textarea>
+                        </div>
+                        <div class="flex justify-end gap-3 mt-6">
+                            <button type="button" onclick="closeConfigModal()" class="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Cancelar</button>
+                            <button type="button" onclick="saveConfigModal()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-600/30 flex items-center gap-2">
+                                <i class="ph-bold ph-floppy-disk"></i> Guardar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="max-w-7xl mx-auto space-y-8 pb-12">
+                
+                <!-- VISTA 1: ALTA MASIVA -->
+                <div id="uploadSectionView" class="space-y-8">
+                    <!-- DASHBOARD HEADER / WIDGETS -->
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Panel de Alta Masiva</h2>
+                        <p class="text-slate-500 text-sm mt-1">Sincronice los registros de Excel con las fotografías de los oficiales de manera automatizada.</p>
+                    </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <i class="ph-fill ph-users text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Plantilla</p>
+                            <h3 class="text-2xl font-bold text-slate-800">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <i class="ph-fill ph-check-circle text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Registros Hoy</p>
+                            <h3 class="text-2xl font-bold text-slate-800">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <i class="ph-fill ph-warning-circle text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Por Validar</p>
+                            <h3 class="text-2xl font-bold text-slate-800">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 relative overflow-hidden group cursor-pointer hover:border-blue-200 transition-colors">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                        <div class="w-12 h-12 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center">
+                            <i class="ph-fill ph-download-simple text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Plantilla Excel</p>
+                            <a href="#" onclick="downloadFormat()" class="text-sm font-bold text-blue-600 hover:underline">Descargar formato</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ALERTS -->
+                <div id="alertContainer" class="hidden rounded-xl p-4 border-l-4 shadow-sm bg-white">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 mt-0.5" id="alertIcon"></div>
+                        <div class="ml-3 flex-1">
+                            <h3 class="text-sm font-semibold" id="alertTitle">Alerta</h3>
+                            <div class="mt-1 text-sm opacity-90" id="alertMessage"></div>
+                        </div>
+                        <button type="button" class="ml-auto p-1.5 rounded-lg hover:bg-black/5 transition-colors focus:outline-none" onclick="hideAlert()">
+                            <i class="ph ph-x text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- WORKSPACE MODULE: UPLOAD -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            <i class="ph ph-cloud-arrow-up text-blue-500 text-xl"></i>
+                            Módulo de Importación
+                        </h3>
+                        <div class="flex items-center gap-4">
+                            <button type="button" onclick="openFormatGuide()" class="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg">
+                                <i class="ph-bold ph-info"></i> Ver ejemplo de formato
+                            </button>
+                            <span class="text-xs font-medium bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full hidden sm:inline-block">Paso 1 de 2</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8" id="uploadSection">
+                            
+                            <!-- Tarjeta Excel -->
+                            <div class="flex flex-col group h-full">
+                                <label class="mb-2 text-sm font-semibold text-slate-700 flex justify-between items-center">
+                                    <span>1. Base de Datos (Excel)</span>
+                                    <span class="text-xs font-normal text-slate-400">.xlsx, .xls</span>
+                                </label>
+                                <div class="drop-zone rounded-xl p-8 text-center cursor-pointer flex-1 flex flex-col justify-center relative border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition-all bg-slate-50" id="excelDropZone">
+                                    <input type="file" id="excelFile" accept=".xlsx, .xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                    <div class="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                                        <i class="ph-fill ph-file-xls text-3xl text-emerald-500"></i>
+                                    </div>
+                                    <p class="text-sm font-medium text-slate-700" id="excelDropText">Arrastre el listado Excel aquí</p>
+                                    <p class="text-xs text-slate-500 mt-2 font-mono bg-white inline-block mx-auto px-3 py-1 rounded border border-slate-200" id="excelFileName">Ningún archivo</p>
+                                </div>
+                                <!-- Feedback del Excel -->
+                                <div id="excelFeedback" class="hidden mt-3 p-3 rounded-lg text-sm border shadow-sm animate-fade-in"></div>
+                            </div>
+
+                            <!-- Tarjeta Imágenes -->
+                            <div class="flex flex-col group h-full">
+                                <label class="mb-2 text-sm font-semibold text-slate-700 flex justify-between items-center">
+                                    <span>2. Carpeta de Fotografías</span>
+                                    <span class="text-xs font-normal text-slate-400">Max 5MB (JPG, PNG)</span>
+                                </label>
+                                <div class="drop-zone rounded-xl p-8 text-center cursor-pointer flex-1 flex flex-col justify-center relative border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition-all bg-slate-50" id="imageDropZone">
+                                    <input type="file" id="imageFiles" accept="image/jpeg, image/png, image/webp" webkitdirectory directory multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                    <div class="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                                        <i class="ph-fill ph-folder-open text-3xl text-blue-500"></i>
+                                    </div>
+                                    <p class="text-sm font-medium text-slate-700" id="imageDropText">Seleccione o arrastre la carpeta aquí</p>
+                                    <p class="text-xs text-slate-500 mt-2 font-mono bg-white inline-block mx-auto px-3 py-1 rounded border border-slate-200" id="imageCountText">0 seleccionadas</p>
+                                </div>
+                                <!-- Feedback de Imágenes -->
+                                <div id="imageFeedback" class="hidden mt-3 p-3 rounded-lg text-sm border shadow-sm animate-fade-in max-h-48 overflow-y-auto custom-scrollbar"></div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PREVIEW SECTION -->
+                <div id="previewSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden animate-fade-in">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-wrap gap-4">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            <i class="ph ph-table text-blue-500 text-xl"></i>
+                            Revisión de Datos Extraídos
+                        </h3>
+                        
+                        <!-- Badges de estado -->
+                        <div class="flex gap-2 text-sm">
+                            <div class="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
+                                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                                <span class="text-slate-600 font-medium">Total: <span id="statTotal" class="text-slate-900 font-bold">0</span></span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-lg shadow-sm">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                                <span class="text-emerald-700 font-medium">Listos: <span id="statReady" class="font-bold">0</span></span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-lg shadow-sm">
+                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                <span class="text-amber-700 font-medium">Falta Foto: <span id="statMissing" class="font-bold">0</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[400px] custom-scrollbar">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-slate-100/50 text-slate-600 font-semibold sticky top-0 z-10 backdrop-blur-sm">
+                                <tr>
+                                    <th class="py-3 px-6 border-b border-slate-200"># Agente</th>
+                                    <th class="py-3 px-6 border-b border-slate-200">Nombre Completo</th>
+                                    <th class="py-3 px-6 border-b border-slate-200 text-center">Vialidad</th>
+                                    <th class="py-3 px-6 border-b border-slate-200 text-center">Puede Multar</th>
+                                    <th class="py-3 px-6 border-b border-slate-200 text-center">Fotografía</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewTableBody" class="divide-y divide-slate-100 text-slate-700">
+                                <!-- JS inyecta filas aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                        <button type="button" onclick="window.location.href='index.html'" class="px-5 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm">
+                            Descartar
+                        </button>
+                        <button type="button" id="btnProcess" class="px-6 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm shadow-blue-600/30 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="ph-bold ph-upload-simple"></i> Registrar en Sistema
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PROGRESS SECTION -->
+                <div id="progressSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden animate-fade-in">
+                    <div class="px-6 py-6 border-b border-slate-100 flex flex-col items-center text-center">
+                        <div class="relative w-20 h-20 mb-4">
+                            <!-- Circular spinner Tailwind -->
+                            <svg class="animate-spin w-20 h-20 text-blue-100" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="#2563EB"></path>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center font-bold text-blue-600 text-sm" id="progressPercentage">0%</div>
+                        </div>
+                        <h2 class="text-xl font-bold text-slate-800">Sincronizando Base de Datos</h2>
+                        <p class="text-sm text-slate-500 mt-1" id="progressText">Conectando con el servidor API...</p>
+                        
+                        <div class="w-full max-w-md bg-slate-100 rounded-full h-2 mt-6 overflow-hidden">
+                            <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-slate-950 p-6 font-mono text-sm h-72 overflow-y-auto text-slate-300 custom-scrollbar relative" id="consoleLog">
+                        <div class="flex items-center gap-2 text-slate-500 mb-4 border-b border-slate-800 pb-2">
+                            <i class="ph-fill ph-terminal-window"></i> Terminal de Operaciones (Logs)
+                        </div>
+                        <!-- Logs here -->
+                    </div>
+                </div>
+                </div> <!-- END VISTA 1 -->
+
+                <!-- VISTA 2: HISTORIAL DE REGISTROS -->
+                <div id="historySectionView" class="hidden space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Oficiales Registrados (Historial Local)</h2>
+                        <p class="text-slate-500 text-sm mt-1">Listado de los oficiales que han sido dados de alta exitosamente durante sus sesiones.</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <div class="relative">
+                                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="searchInput" placeholder="Buscar por nombre o número..." class="pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <button onclick="clearHistory()" class="text-sm text-red-600 hover:text-red-700 font-medium px-4 py-2 hover:bg-red-50 rounded-lg transition-colors">
+                                <i class="ph ph-trash"></i> Limpiar Historial
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-100">
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">No. Agente</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nombre Completo</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Grupo</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Estado / Municipio</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Permisos</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody" class="divide-y divide-slate-100 bg-white">
+                                    <!-- History Rows will be inserted here -->
+                                </tbody>
+                            </table>
+                            
+                            <!-- Empty State -->
+                            <div id="historyEmptyState" class="py-12 flex flex-col items-center justify-center text-center">
+                                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                                    <i class="ph ph-folder-open text-3xl text-slate-400"></i>
+                                </div>
+                                <h3 class="text-slate-800 font-semibold mb-1">Aún no hay registros locales</h3>
+                                <p class="text-slate-500 text-sm max-w-sm">Los oficiales que suba a través de la pestaña de Alta Masiva aparecerán aquí automáticamente.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- END VISTA 2 -->
+
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
