@@ -4,6 +4,14 @@
     {
       "source": "/api/:path*",
       "destination": "https://apipoliciadev.azurewebsites.net/api/:path*"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
     }
   ]
 }
