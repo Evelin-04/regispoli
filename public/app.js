@@ -175,14 +175,21 @@ const REQUIRED_EXCEL_COLUMNS = [
 // ==========================================
 // Descargar Formato Excel (SOLO CABECERAS)
 // ==========================================
-function downloadFormat() {
-    // Generamos un arreglo de arreglos (AOA) con solo la primera fila de títulos
-    const worksheet = XLSX.utils.aoa_to_sheet([REQUIRED_EXCEL_COLUMNS]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Plantilla");
-    
-    // Descargar archivo
-    XLSX.writeFile(workbook, "Plantilla_Registro_SSP.xlsx");
+window.downloadFormat = function() {
+    try {
+        console.log("Iniciando descarga de plantilla...");
+        // Generamos un arreglo de arreglos (AOA) con solo la primera fila de títulos
+        const worksheet = XLSX.utils.aoa_to_sheet([REQUIRED_EXCEL_COLUMNS]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Plantilla");
+        
+        // Descargar archivo usando el método nativo de SheetJS
+        XLSX.writeFile(workbook, "Plantilla_Registro_SSP.xlsx");
+        console.log("Descarga completada.");
+    } catch (error) {
+        console.error("Error al descargar el formato:", error);
+        alert("Hubo un error al generar el Excel. Por favor, revisa la consola.");
+    }
 }
 const MAX_IMAGE_SIZE_MB = 5;
 const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
