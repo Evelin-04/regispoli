@@ -25,8 +25,10 @@ let localHistory = JSON.parse(localStorage.getItem('qr_local_history')) || [];
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('qr_jwt_token');
-    if (!token && !window.location.href.includes('login.html')) {
-        window.location.href = 'login.html';
+    
+    // Si no hay token o el token ha expirado, redirigir al login
+    if ((!token || isTokenExpired(token)) && !window.location.href.includes('login.html')) {
+        logout();
         return;
     }
 
@@ -49,7 +51,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function logout() {
     localStorage.removeItem('qr_jwt_token');
+    localStorage.removeItem('qr_user_name');
+    localStorage.removeItem('qr_user_email');
     window.location.href = 'login.html';
+}
+
+function handleUnauthorized() {
+    console.warn("Sesión expirada o token inválido. Redirigiendo al login...");
+    logout();
+}
+
+function isTokenExpired(token) {
+    if (!token) return true;
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const payload = JSON.parse(jsonPayload);
+        const now = Math.floor(Date.now() / 1000);
+        return payload.exp < now;
+    } catch (e) {
+        console.error("Error al decodificar el token:", e);
+        return true;
+    }
 }
 
 // ==========================================
@@ -760,6 +787,10 @@ btnProcess.addEventListener('click', async () => {
             });
 
             if (!policeResponse.ok) {
+                if (policeResponse.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
                 let errorMsg = `Error ${policeResponse.status}: Fallo en el servidor`;
                 try {
                     const errorJson = await policeResponse.json();
@@ -832,7 +863,10 @@ btnProcess.addEventListener('click', async () => {
             });
 
             if (!groupResponse.ok) {
-                if(groupResponse.status === 401) throw new Error("Error Grupo: JWT Expirado o Inválido (No Autorizado).");
+                if(groupResponse.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
                 const errorData = await groupResponse.json().catch(() => ({}));
                 throw new Error(`Error Grupo: ${errorData.message || 'Falló al crear/buscar grupo'}`);
             }
@@ -863,6 +897,10 @@ btnProcess.addEventListener('click', async () => {
             });
 
             if (!assignResponse.ok) {
+                if (assignResponse.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
                 const errorData = await assignResponse.json().catch(() => ({}));
                 throw new Error(`Error Asignación: ${errorData.message || 'El oficial ya pertenece a este grupo o falló asignación'}`);
             }
@@ -936,6 +974,10 @@ async function updatePolicePhoto(idPolice, photoFile) {
     });
     
     if (!response.ok) {
+        if (response.status === 401) {
+            handleUnauthorized();
+            return;
+        }
         throw new Error('Error al actualizar la foto del policía');
     }
     return await response.json();
@@ -965,6 +1007,10 @@ async function scanPoliceQr(qrHashCode, latitude, longitude, address) {
     });
 
     if (!response.ok) {
+        if (response.status === 401) {
+            handleUnauthorized();
+            return;
+        }
         throw new Error('Error al registrar el escaneo del policía');
     }
     return await response.json();
